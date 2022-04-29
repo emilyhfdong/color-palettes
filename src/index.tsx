@@ -5,19 +5,12 @@ import { App } from "./App"
 import reportWebVitals from "./reportWebVitals"
 import { ThemeProvider } from "@emotion/react"
 import theme from "@rebass/preset"
-import { Provider } from "react-redux"
-import { PersistGate } from "redux-persist/integration/react"
-import { persistor, store } from "./redux/store"
 
 ReactDOM.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <PersistGate persistor={persistor}>
-        <ThemeProvider theme={theme}>
-          <App />
-        </ThemeProvider>
-      </PersistGate>
-    </Provider>
+    <ThemeProvider theme={theme}>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>,
   document.getElementById("root")
 )
