@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react"
 import { Box, Flex, Text } from "rebass"
 import { v4 as uuid } from "uuid"
 
-const SWATCH_SIZE = 100
-
 type Position = {
   x: number
   y: number
@@ -53,7 +51,11 @@ export const App: React.FC = () => {
         if (/#[0-9a-f]{6}|#[0-9a-f]{3}/gi.test(text)) {
           setSwatches([
             ...swatches,
-            { id: uuid(), color: text, position: mousePosition },
+            {
+              id: uuid(),
+              color: text,
+              position: getGridPosition(mousePosition),
+            },
           ])
         } else {
           setHasError(true)
@@ -80,7 +82,14 @@ export const App: React.FC = () => {
         position: "relative",
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "#EBEDEE",
+        backgroundImage:
+          "radial-gradient(circle, #DEE0E1 1px, rgba(0, 0, 0, 0) 1px)",
+        backgroundRepeat: "repeat",
+        backgroundSize: "10px 10px",
+        backgroundPosition: "-5px -5px",
       }}
+      onClick={() => setSelectedSwatch(null)}
     >
       <Flex
         style={{
@@ -131,7 +140,7 @@ export const App: React.FC = () => {
               {
                 id: draggingSwatch.id,
                 color: draggingSwatch.color,
-                position: mousePosition,
+                position: getGridPosition(mousePosition),
               },
             ])
           }}
@@ -142,6 +151,13 @@ export const App: React.FC = () => {
   )
 }
 
+const getGridPosition = ({ x, y }: Position) => {
+  return {
+    x: Math.round(x / 10) * 10,
+    y: Math.round(y / 10) * 10,
+  }
+}
+
 type SwatchProps = {
   onMouseUp?: React.MouseEventHandler<HTMLDivElement>
   onMouseDown?: React.MouseEventHandler<HTMLDivElement>
@@ -150,6 +166,9 @@ type SwatchProps = {
   isSelected?: boolean
   isDragging?: boolean
 }
+const SWATCH_WIDTH = 100
+const SWATCH_HEIGHT = 80
+const LABEL_HEIGHT = 25
 
 export const SwatchBox: React.FC<SwatchProps> = ({
   onMouseDown,
@@ -165,19 +184,24 @@ export const SwatchBox: React.FC<SwatchProps> = ({
       onMouseDown={onMouseDown}
       sx={{
         position: "absolute",
-        height: SWATCH_SIZE,
-        width: SWATCH_SIZE,
-        backgroundColor: color,
-        top: position.y - SWATCH_SIZE / 2,
-        left: position.x - SWATCH_SIZE / 2,
+        height: SWATCH_HEIGHT + LABEL_HEIGHT,
+        width: SWATCH_WIDTH,
+        top: position.y - (SWATCH_HEIGHT + LABEL_HEIGHT) / 2,
+        left: position.x - SWATCH_WIDTH / 2,
         boxShadow:
-          isDragging || isSelected ? "0px 0px 10px rgba(0, 0, 0, 0.2)" : "",
-        padding: "5px",
+          isDragging || isSelected ? "0px 0px 10px rgba(0, 0, 0, 0.1)" : "",
+        border: "1px solid rgba(0, 0, 0, 0.1)",
+        backgroundColor: "white",
       }}
     >
-      <Text style={{ color: "black", fontSize: 12, fontWeight: "bold" }}>
-        {color.toUpperCase()}
-      </Text>
+      <Box
+        sx={{ height: SWATCH_HEIGHT, width: "100%", backgroundColor: color }}
+      ></Box>
+      <Box sx={{ padding: "5px" }}>
+        <Text style={{ color: "black", fontSize: 10, fontWeight: "600" }}>
+          {color.toUpperCase()}
+        </Text>
+      </Box>
     </Box>
   )
 }
