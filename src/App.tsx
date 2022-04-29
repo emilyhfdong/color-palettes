@@ -1,21 +1,18 @@
 import React, { useEffect, useState } from "react"
-import { Box, Flex, Text } from "rebass"
+import { Flex, Text } from "rebass"
 import { v4 as uuid } from "uuid"
+import {
+  ErrorToast,
+  SwatchBox,
+  SWATCHBOX_HEIGHT,
+  SWATCHBOX_WIDTH,
+} from "./components"
+import { Position, Swatch } from "./types"
 
-type Position = {
-  x: number
-  y: number
-}
-
-type Swatch = {
+type DraggingSwatch = {
   id: string
   color: string
-  position: Position
-}
-
-type LocalStorage = {
-  version: number
-  swatches: Swatch[]
+  offset: Position
 }
 
 export const App: React.FC = () => {
@@ -24,9 +21,10 @@ export const App: React.FC = () => {
     x: 0,
     y: 0,
   })
-  const [draggingSwatch, setDraggingSwatch] = useState<Swatch | null>(null)
+  const [draggingSwatch, setDraggingSwatch] = useState<DraggingSwatch | null>(
+    null
+  )
   const [errorMessage, setErrorMessage] = useState("")
-  const [hasError, setHasError] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [selectedSwatch, setSelectedSwatch] = useState<Swatch | null>(null)
 
@@ -59,14 +57,15 @@ export const App: React.FC = () => {
             {
               id: uuid(),
               color: text,
-              position: getGridPosition(mousePosition),
+              position: getGridPosition(mousePosition, {
+                x: SWATCHBOX_WIDTH / 2,
+                y: SWATCHBOX_HEIGHT / 2,
+              }),
             },
           ])
         } else {
-          setHasError(true)
           setErrorMessage(`'${text}' is not valid hex code`)
-          setTimeout(() => setHasError(false), 1000)
-          setTimeout(() => setErrorMessage(""), 2000)
+          setTimeout(() => setErrorMessage(""), 1000)
         }
         return
       }
@@ -88,7 +87,7 @@ export const App: React.FC = () => {
   return (
     <Flex
       onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
-      style={{
+      sx={{
         height: "100vh",
         width: "100vw",
         position: "relative",
@@ -103,36 +102,28 @@ export const App: React.FC = () => {
       }}
       onClick={() => setSelectedSwatch(null)}
     >
-      <Flex
-        style={{
-          position: "absolute",
-          backgroundColor: "#B64E4B",
-          borderRadius: 5,
-          opacity: hasError ? 1 : 0,
-          transition: "opacity 0.5s",
-          top: 50,
-          zIndex: 1000,
-        }}
-      >
-        <Text
-          style={{
-            color: "white",
-            fontWeight: "bold",
-            fontSize: 12,
-            padding: 10,
-          }}
-        >
-          {errorMessage}
+      {!swatches.length && !draggingSwatch && (
+        <Text sx={{ color: "grey", fontSize: 12, fontWeight: "bold" }}>
+          ctrl + v hex codes to start creating palettes!
         </Text>
-      </Flex>
+      )}
+      <ErrorToast text={errorMessage} />
       {swatches.map((swatch) => (
         <SwatchBox
           key={swatch.id}
           onMouseDown={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const y = e.clientY - rect.top
+
             setSelectedSwatch(swatch)
             e.stopPropagation()
             setSwatches(swatches.filter((s) => s.id !== swatch.id))
-            setDraggingSwatch(swatch)
+            setDraggingSwatch({
+              id: swatch.id,
+              color: swatch.color,
+              offset: { x, y },
+            })
           }}
           position={swatch.position}
           color={swatch.color}
@@ -141,7 +132,10 @@ export const App: React.FC = () => {
       ))}
       {draggingSwatch && (
         <SwatchBox
-          position={mousePosition}
+          position={{
+            x: mousePosition.x - draggingSwatch.offset.x,
+            y: mousePosition.y - draggingSwatch.offset.y,
+          }}
           color={draggingSwatch.color}
           isDragging
           onMouseUp={(e) => {
@@ -152,7 +146,7 @@ export const App: React.FC = () => {
               {
                 id: draggingSwatch.id,
                 color: draggingSwatch.color,
-                position: getGridPosition(mousePosition),
+                position: getGridPosition(mousePosition, draggingSwatch.offset),
               },
             ])
           }}
@@ -163,57 +157,9 @@ export const App: React.FC = () => {
   )
 }
 
-const getGridPosition = ({ x, y }: Position) => {
+const getGridPosition = (mousePosition: Position, offset: Position) => {
   return {
-    x: Math.round(x / 10) * 10,
-    y: Math.round(y / 10) * 10,
+    x: Math.round((mousePosition.x - offset.x) / 10) * 10,
+    y: Math.round((mousePosition.y - offset.y) / 10) * 10,
   }
-}
-
-type SwatchProps = {
-  onMouseUp?: React.MouseEventHandler<HTMLDivElement>
-  onMouseDown?: React.MouseEventHandler<HTMLDivElement>
-  color: string
-  position: Position
-  isSelected?: boolean
-  isDragging?: boolean
-}
-const SWATCH_WIDTH = 100
-const SWATCH_HEIGHT = 75
-const LABEL_HEIGHT = 30
-
-export const SwatchBox: React.FC<SwatchProps> = ({
-  onMouseDown,
-  onMouseUp,
-  color,
-  position,
-  isDragging = false,
-  isSelected = false,
-}) => {
-  return (
-    <Box
-      onMouseUp={onMouseUp}
-      onMouseDown={onMouseDown}
-      sx={{
-        position: "absolute",
-        height: SWATCH_HEIGHT + LABEL_HEIGHT,
-        width: SWATCH_WIDTH,
-        top: position.y - (SWATCH_HEIGHT + LABEL_HEIGHT) / 2,
-        left: position.x - SWATCH_WIDTH / 2,
-        boxShadow:
-          isDragging || isSelected ? "0px 0px 10px rgba(0, 0, 0, 0.1)" : "",
-        border: "1px solid rgba(0, 0, 0, 0.1)",
-        backgroundColor: "white",
-      }}
-    >
-      <Box
-        sx={{ height: SWATCH_HEIGHT, width: "100%", backgroundColor: color }}
-      ></Box>
-      <Box sx={{ padding: "5px" }}>
-        <Text style={{ color: "black", fontSize: 10, fontWeight: "600" }}>
-          {color.toUpperCase()}
-        </Text>
-      </Box>
-    </Box>
-  )
 }
