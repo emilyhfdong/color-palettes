@@ -13,6 +13,11 @@ type Swatch = {
   position: Position
 }
 
+type LocalStorage = {
+  version: number
+  swatches: Swatch[]
+}
+
 export const App: React.FC = () => {
   const [swatches, setSwatches] = useState<Swatch[]>([])
   const [mousePosition, setMousePosition] = useState<Position>({
@@ -64,6 +69,13 @@ export const App: React.FC = () => {
           setTimeout(() => setErrorMessage(""), 2000)
         }
         return
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.code === "KeyC" &&
+        selectedSwatch
+      ) {
+        navigator.clipboard.writeText(selectedSwatch.color)
       }
       if (event.code === "Backspace" && selectedSwatch) {
         setSwatches(swatches.filter((s) => s.id !== selectedSwatch.id))
@@ -167,8 +179,8 @@ type SwatchProps = {
   isDragging?: boolean
 }
 const SWATCH_WIDTH = 100
-const SWATCH_HEIGHT = 80
-const LABEL_HEIGHT = 25
+const SWATCH_HEIGHT = 75
+const LABEL_HEIGHT = 30
 
 export const SwatchBox: React.FC<SwatchProps> = ({
   onMouseDown,
