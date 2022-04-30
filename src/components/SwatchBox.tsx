@@ -14,6 +14,7 @@ export const SWATCHBOX_WIDTH = 100
 export const SWATCH_HEIGHT = 80
 const LABEL_HEIGHT = 30
 export const SWATCHBOX_HEIGHT = SWATCH_HEIGHT + LABEL_HEIGHT
+export const SWATCHBOX_Z_INDEX = 10
 
 export const SwatchBox: React.FC<SwatchBoxProps> = ({
   onMouseDown,
@@ -38,6 +39,7 @@ export const SwatchBox: React.FC<SwatchBoxProps> = ({
         border: "1px solid rgba(0, 0, 0, 0.1)",
         backgroundColor: "white",
         cursor: "pointer",
+        zIndex: SWATCHBOX_Z_INDEX,
       }}
     >
       <Box

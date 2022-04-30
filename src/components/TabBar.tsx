@@ -4,6 +4,7 @@ import { ReactComponent as Plus } from "../assets/plus.svg"
 import { ReactComponent as Cross } from "../assets/cross.svg"
 import { Page } from "../types"
 import { v4 as uuid } from "uuid"
+import { SWATCHBOX_Z_INDEX } from "./SwatchBox"
 
 type TabBarProps = {
   pages: Page[]
@@ -12,6 +13,8 @@ type TabBarProps = {
   setActivePageId: (pageId: string) => void
   deletePage: (pageId: string) => void
 }
+
+export const TAB_BAR_HEIGHT = 40
 
 export const TabBar: React.FC<TabBarProps> = ({
   pages,
@@ -24,13 +27,15 @@ export const TabBar: React.FC<TabBarProps> = ({
     <Flex
       sx={{
         position: "absolute",
-        width: "100vw",
         backgroundColor: "white",
         top: 0,
+        left: 0,
+        right: 0,
         alignItems: "center",
         boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.1)",
         flexDirection: "row",
-        height: 40,
+        height: TAB_BAR_HEIGHT,
+        zIndex: SWATCHBOX_Z_INDEX - 1,
       }}
     >
       {pages.map((page) => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { Flex, Text } from "rebass"
 import { v4 as uuid } from "uuid"
 import {
@@ -7,9 +7,11 @@ import {
   SWATCHBOX_HEIGHT,
   SWATCHBOX_WIDTH,
   TabBar,
+  TAB_BAR_HEIGHT,
 } from "./components"
 import { DraggingSwatch, Page, Position, Swatch } from "./types"
 import { localStorageHelpers } from "./utils"
+import { useWindowSize, WindowSize } from "./utils/hooks"
 
 export const App: React.FC = () => {
   const [swatches, setSwatches] = useState<Swatch[]>([])
@@ -22,6 +24,10 @@ export const App: React.FC = () => {
   const [selectedSwatch, setSelectedSwatch] = useState<Swatch | null>(null)
   const [currentPageId, setCurrentPageId] = useState("")
   const [pages, setPages] = useState<Page[]>([{ id: uuid(), name: "Tab 1" }])
+
+  const pageSwatches = swatches.filter((s) => s.pageId === currentPageId)
+  const windowSize = useWindowSize()
+  const { width, height } = getContainerSize(pageSwatches, windowSize)
 
   useEffect(() => {
     if (isInitialized) {
@@ -54,10 +60,14 @@ export const App: React.FC = () => {
               id: uuid(),
               pageId: currentPageId,
               color: text,
-              position: getGridPosition(mousePosition, {
-                x: SWATCHBOX_WIDTH / 2,
-                y: SWATCHBOX_HEIGHT / 2,
-              }),
+              position: getGridPosition(
+                mousePosition,
+                {
+                  x: SWATCHBOX_WIDTH / 2,
+                  y: SWATCHBOX_HEIGHT / 2,
+                },
+                windowSize
+              ),
             },
           ])
         } else {
@@ -79,7 +89,24 @@ export const App: React.FC = () => {
     }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
-  }, [setSwatches, mousePosition, swatches, selectedSwatch, currentPageId])
+  }, [
+    setSwatches,
+    mousePosition,
+    swatches,
+    selectedSwatch,
+    currentPageId,
+    windowSize,
+  ])
+
+  const deletePage = useCallback(
+    (id: string) => {
+      const newPages = pages.filter((p) => p.id !== id)
+      setPages(newPages)
+      setCurrentPageId(newPages[0].id)
+      setSwatches(swatches.filter((s) => s.pageId !== id))
+    },
+    [pages, swatches]
+  )
 
   if (!isInitialized) {
     return null
@@ -89,8 +116,8 @@ export const App: React.FC = () => {
     <Flex
       onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
       sx={{
-        height: "100vh",
-        minWidth: "100vw",
+        height,
+        width,
         position: "relative",
         justifyContent: "center",
         alignItems: "center",
@@ -108,12 +135,7 @@ export const App: React.FC = () => {
         setPages={setPages}
         activePageId={currentPageId}
         setActivePageId={setCurrentPageId}
-        deletePage={(id) => {
-          const newPages = pages.filter((p) => p.id !== id)
-          setPages(newPages)
-          setCurrentPageId(newPages[0].id)
-          setSwatches(swatches.filter((s) => s.pageId !== id))
-        }}
+        deletePage={deletePage}
       />
       {!swatches.length && !draggingSwatch && (
         <Text sx={{ color: "grey", fontSize: 12, fontWeight: "bold" }}>
@@ -121,30 +143,28 @@ export const App: React.FC = () => {
         </Text>
       )}
       <ErrorToast text={errorMessage} />
-      {swatches
-        .filter((s) => s.pageId === currentPageId)
-        .map((swatch) => (
-          <SwatchBox
-            key={swatch.id}
-            onMouseDown={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              const x = e.clientX - rect.left
-              const y = e.clientY - rect.top
+      {pageSwatches.map((swatch) => (
+        <SwatchBox
+          key={swatch.id}
+          onMouseDown={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const y = e.clientY - rect.top
 
-              setSelectedSwatch(swatch)
-              e.stopPropagation()
-              setSwatches(swatches.filter((s) => s.id !== swatch.id))
-              setDraggingSwatch({
-                id: swatch.id,
-                color: swatch.color,
-                offset: { x, y },
-              })
-            }}
-            position={swatch.position}
-            color={swatch.color}
-            isSelected={selectedSwatch?.id === swatch.id}
-          />
-        ))}
+            setSelectedSwatch(swatch)
+            e.stopPropagation()
+            setSwatches(swatches.filter((s) => s.id !== swatch.id))
+            setDraggingSwatch({
+              id: swatch.id,
+              color: swatch.color,
+              offset: { x, y },
+            })
+          }}
+          position={swatch.position}
+          color={swatch.color}
+          isSelected={selectedSwatch?.id === swatch.id}
+        />
+      ))}
       {draggingSwatch && (
         <SwatchBox
           position={{
@@ -161,7 +181,11 @@ export const App: React.FC = () => {
               {
                 id: draggingSwatch.id,
                 color: draggingSwatch.color,
-                position: getGridPosition(mousePosition, draggingSwatch.offset),
+                position: getGridPosition(
+                  mousePosition,
+                  draggingSwatch.offset,
+                  windowSize
+                ),
                 pageId: currentPageId,
               },
             ])
@@ -172,10 +196,50 @@ export const App: React.FC = () => {
     </Flex>
   )
 }
-
-const getGridPosition = (mousePosition: Position, offset: Position) => {
-  return {
-    x: Math.round((mousePosition.x - offset.x) / 10) * 10,
-    y: Math.round((mousePosition.y - offset.y) / 10) * 10,
+const GRID_SIZE = 10
+const getGridPosition = (
+  mousePosition: Position,
+  offset: Position,
+  windowSize: WindowSize
+) => {
+  let x = mousePosition.x - offset.x
+  if (x < 0) {
+    x = GRID_SIZE
   }
+  if (windowSize.width && x + SWATCHBOX_WIDTH > windowSize.width) {
+    x = windowSize.width - GRID_SIZE - SWATCHBOX_WIDTH
+  }
+
+  let y = mousePosition.y - offset.y
+
+  if (y < TAB_BAR_HEIGHT) {
+    y = TAB_BAR_HEIGHT + GRID_SIZE
+  }
+  if (windowSize.height && y + SWATCHBOX_HEIGHT > windowSize.height) {
+    y = windowSize.height - GRID_SIZE - SWATCHBOX_HEIGHT
+  }
+
+  return {
+    x: Math.round(x / GRID_SIZE) * GRID_SIZE,
+    y: Math.round(y / GRID_SIZE) * GRID_SIZE,
+  }
+}
+
+export const getContainerSize = (
+  pageSwatches: Swatch[],
+  windowSize: WindowSize
+) => {
+  const width = Math.max(
+    ...[
+      windowSize.width || 0,
+      ...pageSwatches.map((s) => s.position.x + SWATCHBOX_WIDTH * 2),
+    ]
+  )
+  const height = Math.max(
+    ...[
+      windowSize.height || 0,
+      ...pageSwatches.map((s) => s.position.y + SWATCHBOX_HEIGHT * 2),
+    ]
+  )
+  return { width, height }
 }
