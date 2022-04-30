@@ -6,43 +6,39 @@ import {
   SwatchBox,
   SWATCHBOX_HEIGHT,
   SWATCHBOX_WIDTH,
+  TabBar,
 } from "./components"
-import { Position, Swatch } from "./types"
-
-type DraggingSwatch = {
-  id: string
-  color: string
-  offset: Position
-}
+import { DraggingSwatch, Page, Position, Swatch } from "./types"
+import { localStorageHelpers } from "./utils"
 
 export const App: React.FC = () => {
   const [swatches, setSwatches] = useState<Swatch[]>([])
-  const [mousePosition, setMousePosition] = useState<Position>({
-    x: 0,
-    y: 0,
-  })
+  const [mousePosition, setMousePosition] = useState<Position>({ x: 0, y: 0 })
   const [draggingSwatch, setDraggingSwatch] = useState<DraggingSwatch | null>(
     null
   )
   const [errorMessage, setErrorMessage] = useState("")
   const [isInitialized, setIsInitialized] = useState(false)
   const [selectedSwatch, setSelectedSwatch] = useState<Swatch | null>(null)
+  const [currentPageId, setCurrentPageId] = useState("")
+  const [pages, setPages] = useState<Page[]>([{ id: uuid(), name: "Tab 1" }])
 
   useEffect(() => {
     if (isInitialized) {
-      localStorage.setItem("swatches", JSON.stringify(swatches))
+      localStorageHelpers.set({ swatches, pages })
     }
-  }, [swatches, isInitialized])
+  }, [swatches, isInitialized, pages])
 
   useEffect(() => {
-    const localSwatches = localStorage.getItem("swatches")
-    if (localSwatches) {
-      try {
-        const parsedSwatches = JSON.parse(localSwatches)
-        setSwatches(parsedSwatches)
-      } catch (e) {
-        console.log("Error setting local swatches")
-      }
+    const persistedState = localStorageHelpers.get()
+    if (persistedState) {
+      setSwatches(persistedState.swatches)
+      setPages(persistedState.pages)
+      setCurrentPageId(persistedState.pages[0].id)
+    } else {
+      const newPageId = uuid()
+      setPages([{ id: newPageId, name: "Tab 1" }])
+      setCurrentPageId(newPageId)
     }
     setIsInitialized(true)
   }, [])
@@ -56,6 +52,7 @@ export const App: React.FC = () => {
             ...swatches,
             {
               id: uuid(),
+              pageId: currentPageId,
               color: text,
               position: getGridPosition(mousePosition, {
                 x: SWATCHBOX_WIDTH / 2,
@@ -82,14 +79,18 @@ export const App: React.FC = () => {
     }
     document.addEventListener("keydown", handler)
     return () => document.removeEventListener("keydown", handler)
-  }, [setSwatches, mousePosition, swatches, selectedSwatch])
+  }, [setSwatches, mousePosition, swatches, selectedSwatch, currentPageId])
+
+  if (!isInitialized) {
+    return null
+  }
 
   return (
     <Flex
       onMouseMove={(e) => setMousePosition({ x: e.clientX, y: e.clientY })}
       sx={{
         height: "100vh",
-        width: "100vw",
+        minWidth: "100vw",
         position: "relative",
         justifyContent: "center",
         alignItems: "center",
@@ -102,34 +103,48 @@ export const App: React.FC = () => {
       }}
       onClick={() => setSelectedSwatch(null)}
     >
+      <TabBar
+        pages={pages}
+        setPages={setPages}
+        activePageId={currentPageId}
+        setActivePageId={setCurrentPageId}
+        deletePage={(id) => {
+          const newPages = pages.filter((p) => p.id !== id)
+          setPages(newPages)
+          setCurrentPageId(newPages[0].id)
+          setSwatches(swatches.filter((s) => s.pageId !== id))
+        }}
+      />
       {!swatches.length && !draggingSwatch && (
         <Text sx={{ color: "grey", fontSize: 12, fontWeight: "bold" }}>
           ctrl + v hex codes to start creating palettes!
         </Text>
       )}
       <ErrorToast text={errorMessage} />
-      {swatches.map((swatch) => (
-        <SwatchBox
-          key={swatch.id}
-          onMouseDown={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            const y = e.clientY - rect.top
+      {swatches
+        .filter((s) => s.pageId === currentPageId)
+        .map((swatch) => (
+          <SwatchBox
+            key={swatch.id}
+            onMouseDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const x = e.clientX - rect.left
+              const y = e.clientY - rect.top
 
-            setSelectedSwatch(swatch)
-            e.stopPropagation()
-            setSwatches(swatches.filter((s) => s.id !== swatch.id))
-            setDraggingSwatch({
-              id: swatch.id,
-              color: swatch.color,
-              offset: { x, y },
-            })
-          }}
-          position={swatch.position}
-          color={swatch.color}
-          isSelected={selectedSwatch?.id === swatch.id}
-        />
-      ))}
+              setSelectedSwatch(swatch)
+              e.stopPropagation()
+              setSwatches(swatches.filter((s) => s.id !== swatch.id))
+              setDraggingSwatch({
+                id: swatch.id,
+                color: swatch.color,
+                offset: { x, y },
+              })
+            }}
+            position={swatch.position}
+            color={swatch.color}
+            isSelected={selectedSwatch?.id === swatch.id}
+          />
+        ))}
       {draggingSwatch && (
         <SwatchBox
           position={{
@@ -147,6 +162,7 @@ export const App: React.FC = () => {
                 id: draggingSwatch.id,
                 color: draggingSwatch.color,
                 position: getGridPosition(mousePosition, draggingSwatch.offset),
+                pageId: currentPageId,
               },
             ])
           }}

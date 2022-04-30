@@ -11,7 +11,7 @@ type SwatchBoxProps = {
   isDragging?: boolean
 }
 export const SWATCHBOX_WIDTH = 100
-export const SWATCH_HEIGHT = 75
+export const SWATCH_HEIGHT = 80
 const LABEL_HEIGHT = 30
 export const SWATCHBOX_HEIGHT = SWATCH_HEIGHT + LABEL_HEIGHT
 
@@ -37,6 +37,7 @@ export const SwatchBox: React.FC<SwatchBoxProps> = ({
           isDragging || isSelected ? "0px 0px 10px rgba(0, 0, 0, 0.1)" : "",
         border: "1px solid rgba(0, 0, 0, 0.1)",
         backgroundColor: "white",
+        cursor: "pointer",
       }}
     >
       <Box
