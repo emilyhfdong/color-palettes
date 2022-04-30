@@ -137,7 +137,7 @@ export const App: React.FC = () => {
         setActivePageId={setCurrentPageId}
         deletePage={deletePage}
       />
-      {!swatches.length && !draggingSwatch && (
+      {!pageSwatches.length && !draggingSwatch && (
         <Text sx={{ color: "grey", fontSize: 12, fontWeight: "bold" }}>
           ctrl + v hex codes to start creating palettes!
         </Text>
