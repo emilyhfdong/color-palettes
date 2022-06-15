@@ -23,3 +23,37 @@ export const useWindowSize = (): WindowSize => {
   }, [])
   return windowSize
 }
+
+type UseKeyDownArgs = {
+  onPaste: (text: string) => void
+  copyText?: string
+  onBackspace: () => void
+}
+
+export const useKeyDown = ({
+  onPaste,
+  copyText,
+  onBackspace,
+}: UseKeyDownArgs) => {
+  useEffect(() => {
+    const handler = async (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.code === "KeyV") {
+        const text = await navigator.clipboard.readText()
+        onPaste(text)
+        return
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.code === "KeyC" &&
+        copyText
+      ) {
+        navigator.clipboard.writeText(copyText)
+      }
+      if (event.code === "Backspace") {
+        onBackspace()
+      }
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [copyText, onPaste, onBackspace])
+}

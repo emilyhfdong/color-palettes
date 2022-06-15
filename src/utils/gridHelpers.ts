@@ -6,10 +6,10 @@ import {
 import { Position, Swatch } from "../types"
 import { WindowSize } from "./hooks"
 
-const GRID_SIZE = 10
-export const getGridPosition = (mousePosition: Position, offset: Position) => {
-  const x = mousePosition.x - offset.x
-  const y = mousePosition.y - offset.y
+export const GRID_SIZE = 10
+export const getGridPosition = (mousePosition: Position, offset?: Position) => {
+  const x = mousePosition.x - (offset?.x || 0)
+  const y = mousePosition.y - (offset?.y || 0)
 
   return {
     x: getRoundedValue(x < 0 ? GRID_SIZE : x),

@@ -1,28 +1,29 @@
-import React, { useRef, useState } from "react"
+import React, { useCallback, useRef, useState } from "react"
 import { Flex } from "rebass"
 import { ReactComponent as Plus } from "../assets/plus.svg"
 import { ReactComponent as Cross } from "../assets/cross.svg"
-import { Page } from "../types"
 import { v4 as uuid } from "uuid"
 import { SWATCHBOX_Z_INDEX } from "./SwatchBox"
-
-type TabBarProps = {
-  pages: Page[]
-  setPages: (pages: Page[]) => void
-  activePageId: string
-  setActivePageId: (pageId: string) => void
-  deletePage: (pageId: string) => void
-}
+import { useAppDispatch, useAppSelector } from "../store"
+import { actions } from "../store/slice"
 
 export const TAB_BAR_HEIGHT = 40
 
-export const TabBar: React.FC<TabBarProps> = ({
-  pages,
-  setPages,
-  activePageId,
-  setActivePageId,
-  deletePage,
-}) => {
+export const TabBar: React.FC = () => {
+  const pages = useAppSelector((state) => state.pages)
+  const currentPageId = useAppSelector((state) => state.currentPageId)
+  const swatches = useAppSelector((state) => state.swatches)
+  const dispatch = useAppDispatch()
+
+  const deletePage = useCallback(
+    (id: string) => {
+      const newPages = pages.filter((p) => p.id !== id)
+      dispatch(actions.setPages(newPages))
+      dispatch(actions.setCurrentPageId(newPages[0].id))
+      dispatch(actions.setSwatches(swatches.filter((s) => s.pageId !== id)))
+    },
+    [pages, swatches, dispatch]
+  )
   return (
     <Flex
       sx={{
@@ -39,22 +40,24 @@ export const TabBar: React.FC<TabBarProps> = ({
       }}
     >
       {pages.map((page) => {
-        const active = activePageId === page.id
+        const active = currentPageId === page.id
         return (
           <Tab
             key={page.id}
             name={page.name}
             active={active}
             setName={(newName: string) =>
-              setPages(
-                pages.map((p) =>
-                  p.id === page.id ? { ...page, name: newName } : p
+              dispatch(
+                actions.setPages(
+                  pages.map((p) =>
+                    p.id === page.id ? { ...page, name: newName } : p
+                  )
                 )
               )
             }
             onClick={() => {
               if (!active) {
-                setActivePageId(page.id)
+                dispatch(actions.setCurrentPageId(page.id))
               }
             }}
             deletePage={() => deletePage(page.id)}
@@ -67,8 +70,10 @@ export const TabBar: React.FC<TabBarProps> = ({
         style={{ height: 15, width: 15, marginLeft: 10, cursor: "pointer" }}
         onClick={() => {
           const pageId = uuid()
-          setPages([...pages, { id: pageId, name: "New Tab" }])
-          setActivePageId(pageId)
+          dispatch(
+            actions.setPages([...pages, { id: pageId, name: "New Tab" }])
+          )
+          dispatch(actions.setCurrentPageId(pageId))
         }}
       />
     </Flex>
