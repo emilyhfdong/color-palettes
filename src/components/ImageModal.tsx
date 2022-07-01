@@ -71,7 +71,6 @@ export const ImageModal: React.FC = () => {
     >
       <Box
         sx={{
-          width: "80vw",
           backgroundColor: "white",
           padding: 40,
           borderRadius: 10,
@@ -92,7 +91,7 @@ export const ImageModal: React.FC = () => {
           ref={ref}
           crossOrigin="anonymous"
           src={getImageUrl(imageUrl)}
-          sx={{}}
+          sx={{ height: "50vh" }}
           onLoad={onImageLoad}
         />
         <Box sx={{ display: "flex", marginTop: 10 }}>
@@ -127,7 +126,6 @@ export const ImageModal: React.FC = () => {
             height: 40,
             borderRadius: 20,
             backgroundColor: "#254172",
-            // fontFamily: "Rozha One",
             fontSize: 12,
             fontWeight: "bold",
             cursor: "pointer",
