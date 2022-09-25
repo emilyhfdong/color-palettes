@@ -47,14 +47,14 @@ export const App: React.FC = () => {
 
   useKeyDown({
     onPaste: (text) => {
-      if (isHexCode(text)) {
+      if (isHexCode(text) || isHexCode(`#${text}`)) {
         dispatch(
           actions.setSwatches([
             ...swatches,
             {
               id: uuid(),
               pageId: currentPageId,
-              color: text,
+              color: isHexCode(text) ? text : `#${text}`,
               position: getGridPosition(mousePosition, {
                 x: SWATCHBOX_WIDTH / 2,
                 y: SWATCHBOX_HEIGHT / 2,
